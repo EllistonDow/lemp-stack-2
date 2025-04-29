@@ -1,0 +1,16 @@
+# 忽略压缩包和二进制文件
+*.tar.gz
+*.deb
+valkey-*/
+opensearch-*/
+
+# 系统和编辑器文件
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
+
+# 日志文件
+logs/
+*.log 
