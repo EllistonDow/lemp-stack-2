@@ -1,0 +1,10 @@
+---
+# phpMyAdmin 独立安装 playbook
+
+- name: 安装 phpMyAdmin
+  hosts: all
+  become: yes
+  
+  roles:
+    - role: phpmyadmin
+      tags: [phpmyadmin, admin] 

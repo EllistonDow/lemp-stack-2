@@ -1,0 +1,28 @@
+<?php
+/* 由 Ansible 自动生成 */
+
+/* 服务器配置 */
+$i = 0;
+$i++;
+$cfg['Servers'][$i]['host'] = 'localhost';
+$cfg['Servers'][$i]['connect_type'] = 'tcp';
+$cfg['Servers'][$i]['compress'] = false;
+$cfg['Servers'][$i]['AllowNoPassword'] = false;
+$cfg['Servers'][$i]['auth_type'] = 'cookie';
+
+/* Blowfish secret */
+$cfg['blowfish_secret'] = '{{ phpmyadmin_blowfish_secret }}';
+
+/* 界面设置 */
+$cfg['DefaultLang'] = 'zh_CN';  /* 默认中文界面 */
+$cfg['ServerDefault'] = 1;
+$cfg['UploadDir'] = '';
+$cfg['SaveDir'] = '';
+
+/* 上传文件设置 */
+$cfg['MaxRows'] = 50;
+$cfg['SendErrorReports'] = 'never';
+$cfg['ShowPhpInfo'] = false;
+
+/* 临时目录 */
+$cfg['TempDir'] = '{{ phpmyadmin_install_dir }}/tmp'; 

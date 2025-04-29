@@ -1,0 +1,93 @@
+---
+# phpMyAdmin 安装任务
+
+- name: 检查是否安装 phpMyAdmin
+  stat:
+    path: "{{ phpmyadmin_install_dir }}/index.php"
+  register: phpmyadmin_installed
+  
+- name: 设置具体的 phpMyAdmin 版本（如果指定为"latest"）
+  set_fact:
+    phpmyadmin_version: "5.2.1"
+    phpmyadmin_download_url: "https://files.phpmyadmin.net/phpMyAdmin/5.2.1/phpMyAdmin-5.2.1-all-languages.tar.gz"
+  when: phpmyadmin_version == "latest"
+  
+- name: 创建 phpMyAdmin 目录
+  file:
+    path: "{{ phpmyadmin_install_dir }}"
+    state: directory
+    owner: "www-data"
+    group: "www-data"
+    mode: '0755'
+  when: phpmyadmin_install | bool and not phpmyadmin_installed.stat.exists
+  
+- name: 下载并解压 phpMyAdmin
+  unarchive:
+    src: "{{ phpmyadmin_download_url }}"
+    dest: "/tmp"
+    remote_src: yes
+  register: phpmyadmin_download
+  when: phpmyadmin_install | bool and not phpmyadmin_installed.stat.exists
+  
+- name: 查找解压后的目录
+  find:
+    paths: "/tmp"
+    patterns: "phpMyAdmin-*"
+    file_type: directory
+  register: phpmyadmin_extracted_dir
+  when: phpmyadmin_install | bool and phpmyadmin_download.changed
+  
+# 初始化 files 为空列表，防止后续任务出错
+- name: 初始化 phpmyadmin_extracted_dir.files
+  set_fact:
+    phpmyadmin_extracted_dir: { "files": [] }
+  when: phpmyadmin_install | bool and (phpmyadmin_extracted_dir is not defined or 'files' not in phpmyadmin_extracted_dir)
+
+- name: 复制 phpMyAdmin 文件到目标目录
+  shell: "cp -a {{ item.path }}/* {{ phpmyadmin_install_dir }}/"
+  with_items: "{{ phpmyadmin_extracted_dir.files }}"
+  when: phpmyadmin_install | bool and phpmyadmin_extracted_dir.files | length > 0
+  
+- name: 删除临时解压目录
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ phpmyadmin_extracted_dir.files }}"
+  when: phpmyadmin_install | bool and phpmyadmin_extracted_dir.files | length > 0
+  
+- name: 创建 phpMyAdmin 配置文件
+  template:
+    src: config.inc.php.j2
+    dest: "{{ phpmyadmin_install_dir }}/config.inc.php"
+    owner: "www-data"
+    group: "www-data"
+    mode: '0644'
+  when: phpmyadmin_install | bool
+  
+- name: 创建临时目录
+  file:
+    path: "{{ phpmyadmin_install_dir }}/tmp"
+    state: directory
+    owner: "www-data"
+    group: "www-data"
+    mode: '0755'
+  when: phpmyadmin_install | bool
+  
+- name: 配置 Nginx 虚拟主机
+  template:
+    src: nginx.conf.j2
+    dest: "{{ phpmyadmin_nginx_config_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  when: phpmyadmin_install | bool
+  notify: restart nginx
+  
+- name: 设置正确的权限
+  file:
+    path: "{{ phpmyadmin_install_dir }}"
+    owner: "www-data"
+    group: "www-data"
+    mode: '0755'
+    recurse: yes
+  when: phpmyadmin_install | bool 

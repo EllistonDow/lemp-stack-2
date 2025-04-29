@@ -1,0 +1,24 @@
+---
+# phpMyAdmin 安装配置
+
+# 安装选项
+phpmyadmin_install: true
+phpmyadmin_version: "{{ phpmyadmin_version | default('5.2.1') }}"  # 使用全局变量或默认值
+phpmyadmin_download_url: "https://files.phpmyadmin.net/phpMyAdmin/{{ phpmyadmin_version }}/phpMyAdmin-{{ phpmyadmin_version }}-all-languages.tar.gz"
+
+# 部署目录
+phpmyadmin_install_dir: "/var/www/html/phpmyadmin"
+
+# Web 访问配置
+phpmyadmin_domain: "pma.{{ ansible_fqdn }}"  # 可以改为实际域名
+phpmyadmin_allow_remote_access: true
+
+# 安全设置
+phpmyadmin_blowfish_secret: "{{ phpmyadmin_blowfish_secret | default(lookup('password', '/dev/null chars=ascii_letters,digits length=32')) }}"
+phpmyadmin_allow_ips: ["127.0.0.1", "::1"]  # 允许访问的 IP 地址列表，默认仅本地访问
+
+# Nginx 配置
+phpmyadmin_nginx_config_path: "/etc/nginx/conf.d/phpmyadmin.conf"
+phpmyadmin_nginx_log_path: "/var/log/nginx"
+phpmyadmin_nginx_access_log: "{{ phpmyadmin_nginx_log_path }}/phpmyadmin_access.log"
+phpmyadmin_nginx_error_log: "{{ phpmyadmin_nginx_log_path }}/phpmyadmin_error.log" 
