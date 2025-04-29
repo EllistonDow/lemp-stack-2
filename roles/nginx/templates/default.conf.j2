@@ -1,0 +1,46 @@
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    server_name _;
+    root {{ nginx_default_site_root }};
+    index index.php index.html index.htm;
+
+    access_log /var/log/nginx/default.access.log main;
+    error_log /var/log/nginx/default.error.log;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # 禁止访问隐藏文件
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    # 静态文件缓存设置
+    location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
+        expires 30d;
+        add_header Cache-Control "public, no-transform";
+    }
+
+    # 防止PHP文件被直接访问，必须通过应用程序执行
+    location ~* \.(php|phar)$ {
+        deny all;
+    }
+
+    # 拒绝访问敏感文件
+    location ~* \.(htaccess|htpasswd|ini|log|sh|sql|conf)$ {
+        deny all;
+    }
+
+    # 显示服务器信息
+    location = /server-status {
+        stub_status on;
+        access_log off;
+        allow 127.0.0.1;
+        deny all;
+    }
+} 

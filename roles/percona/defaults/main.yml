@@ -1,0 +1,47 @@
+---
+# Percona 角色默认变量
+
+# 版本配置
+percona_version: "8.4"
+
+# 数据库配置
+percona_root_password: "StrongR00tPassw0rd"  # 强烈建议修改此密码
+mysql_config_file: "/root/.my.cnf"
+percona_create_database: true
+percona_database:
+  name: "lemp_db"
+  user: "lemp_user"
+  password: "StrongDbPassw0rd"  # 强烈建议修改此密码
+
+# MySQL优化设置
+mysql_innodb_buffer_pool_size: "128M"  # 根据服务器内存调整
+mysql_innodb_log_file_size: "48M"
+mysql_max_connections: 151
+mysql_table_open_cache: 4000
+mysql_query_cache_size: "0"  # 在MySQL 8.x中建议禁用查询缓存
+mysql_query_cache_type: "0"
+mysql_tmp_table_size: "32M"
+mysql_max_heap_table_size: "32M"
+mysql_max_allowed_packet: "16M"
+mysql_join_buffer_size: "1M"
+mysql_sort_buffer_size: "2M"
+mysql_read_buffer_size: "1M"
+mysql_read_rnd_buffer_size: "4M"
+mysql_myisam_sort_buffer_size: "64M"
+mysql_thread_cache_size: 16
+mysql_open_files_limit: 65535
+mysql_character_set_server: "utf8mb4"
+mysql_collation_server: "utf8mb4_general_ci"
+
+# 日志设置
+mysql_log_error: "/var/log/mysql/error.log"
+mysql_slow_query_log: "1"
+mysql_slow_query_log_file: "/var/log/mysql/mysql-slow.log"
+mysql_long_query_time: "2"
+
+# 备份设置
+mysql_backup_enabled: true
+mysql_backup_dir: "/var/backups/mysql"
+mysql_backup_day: "*"
+mysql_backup_hour: "2"
+mysql_backup_minute: "0" 

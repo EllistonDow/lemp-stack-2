@@ -1,0 +1,61 @@
+---
+# Valkey (Redis) 安装和配置任务
+
+- name: 添加Valkey仓库密钥
+  apt_key:
+    url: https://download.redis.com/valkey/valkey-archive-keyring.gpg
+    state: present
+  register: valkey_key_added
+
+- name: 添加Valkey仓库
+  apt_repository:
+    repo: deb https://download.redis.com/valkey/deb {{ ansible_distribution_release | lower }} main
+    state: present
+    filename: valkey
+  register: valkey_repo_added
+
+- name: 更新apt缓存
+  apt:
+    update_cache: yes
+  when: valkey_key_added.changed or valkey_repo_added.changed
+
+- name: 安装Valkey
+  apt:
+    name: "valkey"
+    state: present
+  register: valkey_installed
+
+- name: 创建Valkey配置目录
+  file:
+    path: /etc/valkey
+    state: directory
+    mode: '0755'
+  register: valkey_dir_created
+
+- name: 创建Valkey配置文件
+  template:
+    src: valkey.conf.j2
+    dest: /etc/valkey/valkey.conf
+    owner: redis
+    group: redis
+    mode: '0640'
+  register: valkey_conf_created
+  notify: restart valkey
+
+- name: 创建Valkey服务配置
+  template:
+    src: valkey.service.j2
+    dest: /etc/systemd/system/valkey.service
+    owner: root
+    group: root
+    mode: '0644'
+  register: valkey_service_created
+  notify: restart valkey
+
+- name: 启用Valkey服务
+  systemd:
+    daemon_reload: yes
+    name: valkey
+    state: started
+    enabled: yes
+  register: valkey_enabled 

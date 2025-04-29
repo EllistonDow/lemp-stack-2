@@ -1,0 +1,60 @@
+---
+# PHP 角色默认变量
+
+# 安装版本
+php_versions:
+  - "8.4"
+  - "8.3"
+
+# 默认PHP版本
+default_php_version: "8.4"
+
+# PHP扩展
+php_packages:
+  - cli
+  - fpm
+  - mysql
+  - curl
+  - gd
+  - mbstring
+  - xml
+  - zip
+  - intl
+  - bcmath
+  - soap
+  - redis
+
+# PHP配置
+php_memory_limit: "256M"
+php_max_execution_time: 60
+php_upload_max_filesize: "64M"
+php_post_max_size: "64M"
+php_allow_url_fopen: "Off"
+php_expose_php: "Off"
+php_display_errors: "Off"
+php_error_reporting: "E_ALL & ~E_DEPRECATED & ~E_STRICT"
+php_max_input_vars: 3000
+php_date_timezone: "UTC"
+php_opcache_enable: 1
+php_opcache_memory_consumption: 128
+php_opcache_interned_strings_buffer: 8
+php_opcache_max_accelerated_files: 4000
+php_opcache_revalidate_freq: 60
+php_opcache_enable_cli: 1
+
+# PHP-FPM配置
+php_fpm_pm: dynamic
+php_fpm_max_children: 50
+php_fpm_start_servers: 5
+php_fpm_min_spare_servers: 5
+php_fpm_max_spare_servers: 35
+php_fpm_max_requests: 500
+php_fpm_process_idle_timeout: "60s"
+
+# Composer设置
+php_install_composer: true
+composer_version: "2.8"
+composer_global_packages: []
+
+# 其他设置
+php_create_info_page: true 

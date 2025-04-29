@@ -1,0 +1,123 @@
+---
+# 全局变量
+
+# 系统设置
+timezone: 'America/Los_Angeles'
+locale: 'en_US.UTF-8'
+system_packages:
+  - software-properties-common
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - python3-pip
+  - python3-setuptools
+  - unzip
+  - vim
+  - htop
+  - git
+  - wget
+
+# 安装选项
+install_mysql: true  # 是否安装MySQL/Percona - 暂时禁用
+install_redis: true  # 是否安装Valkey/Redis - 暂时禁用，无法下载密钥
+
+# 防火墙设置
+firewall_enabled: true
+firewall_allowed_tcp_ports:
+  - 22   # SSH
+  - 80   # HTTP
+  - 443  # HTTPS
+  - 10000 # Webmin
+
+# Nginx配置
+nginx_version: "1.27"
+nginx_install_modsecurity: true  # 生产环境需启用ModSecurity
+nginx_worker_processes: "auto"
+nginx_worker_connections: 1024
+nginx_client_max_body_size: "64m"
+nginx_server_tokens: "off"
+nginx_default_site_enabled: true
+
+# PHP配置
+php_versions:
+  - "8.4"
+  - "8.3"
+default_php_version: "8.4"
+php_packages:
+  - cli
+  - fpm
+  - mysql
+  - curl
+  - gd
+  - mbstring
+  - xml
+  - zip
+  - intl
+  - bcmath
+  - soap
+  - redis
+php_memory_limit: "256M"
+php_max_execution_time: 60
+php_upload_max_filesize: "64M"
+php_post_max_size: "64M"
+
+# Percona配置
+percona_version: "8.0"
+percona_root_password: "StrongR00tPassw0rd"  # 务必修改此密码
+percona_create_database: true
+percona_database:
+  name: "lemp_db"
+  user: "lemp_user"
+  password: "StrongDbPassw0rd"  # 务必修改此密码
+
+# Valkey (Redis) 配置
+valkey_version: "8"
+valkey_port: 6379
+valkey_bind_interface: "127.0.0.1"
+valkey_password: ""  # 若需要密码，请设置 
+
+# OpenSearch配置
+opensearch_version: "2.19"
+opensearch_heap_size: "1g"  # 根据服务器内存调整
+opensearch_cluster_name: "lemp-cluster"
+opensearch_http_port: 9200
+opensearch_node_name: "node-1"
+
+# RabbitMQ配置
+rabbitmq_version: "4"
+rabbitmq_create_user: true
+rabbitmq_user: "lemp_user"
+rabbitmq_password: "StrongRabbitPassw0rd"  # 务必修改此密码
+rabbitmq_vhost: "lemp_vhost"
+
+# Varnish配置
+varnish_version: "7.6"
+varnish_port: 6081
+varnish_memory: "256m"
+
+# Composer配置
+composer_version: "2.8"
+composer_global_packages: []
+
+# Certbot配置
+certbot_auto_renew: true
+certbot_auto_renew_hour: 3
+certbot_auto_renew_minute: 30
+certbot_create_if_missing: true
+certbot_create_standalone_stop_services:
+  - nginx
+
+# phpMyAdmin配置
+phpmyadmin_version: "latest"
+phpmyadmin_blowfish_secret: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
+
+# 网站配置示例
+websites:
+  - name: "example.com"
+    server_name: "example.com www.example.com"
+    root: "/var/www/example.com"
+    php_version: "8.4"
+    ssl: false
+    # certbot_email: "admin@example.com"  # 启用SSL时需要 

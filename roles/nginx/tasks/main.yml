@@ -1,0 +1,163 @@
+---
+# Nginx安装和配置任务
+
+- name: 添加Nginx官方仓库密钥
+  apt_key:
+    url: https://nginx.org/keys/nginx_signing.key
+    state: present
+  register: nginx_key_added
+
+- name: 添加Nginx官方仓库
+  apt_repository:
+    repo: "deb https://nginx.org/packages/mainline/ubuntu/ jammy nginx"
+    state: present
+    filename: nginx-mainline
+  register: nginx_repo_added
+
+- name: 更新apt缓存
+  apt:
+    update_cache: yes
+  when: nginx_key_added.changed or nginx_repo_added.changed
+
+- name: 安装Nginx
+  apt:
+    name: "nginx={{ nginx_version }}.*"
+    state: present
+  register: nginx_installed
+
+- name: 安装ModSecurity和相关依赖
+  block:
+    - name: 安装ModSecurity依赖
+      apt:
+        name:
+          - libmodsecurity3
+          - libmodsecurity-dev
+          - nginx-module-modsecurity
+        state: present
+      register: modsecurity_installed
+      ignore_errors: yes
+
+    - name: 从GitHub克隆OWASP ModSecurity核心规则集
+      git:
+        repo: https://github.com/coreruleset/coreruleset.git
+        dest: /etc/nginx/modsecurity-crs
+        version: v3.3.4
+      register: crs_cloned
+      when: modsecurity_installed is success
+
+    - name: 复制ModSecurity推荐配置
+      copy:
+        src: /etc/nginx/modsecurity-crs/crs-setup.conf.example
+        dest: /etc/nginx/modsecurity-crs/crs-setup.conf
+        remote_src: yes
+      when: crs_cloned is defined and crs_cloned.changed
+      register: crs_conf_copied
+
+    - name: 创建ModSecurity配置目录
+      file:
+        path: /etc/nginx/modsecurity
+        state: directory
+        mode: '0755'
+      register: modsecurity_dir_created
+      when: modsecurity_installed is success
+
+    - name: 创建ModSecurity主配置
+      template:
+        src: modsecurity.conf.j2
+        dest: /etc/nginx/modsecurity/modsecurity.conf
+      register: modsecurity_conf_created
+      when: modsecurity_dir_created is success
+      notify: restart nginx
+
+    - name: 启用ModSecurity在Nginx中
+      template:
+        src: modsecurity-nginx.conf.j2
+        dest: /etc/nginx/conf.d/modsecurity.conf
+      register: modsecurity_nginx_conf_created
+      when: modsecurity_conf_created is success
+      notify: restart nginx
+  when: nginx_install_modsecurity | bool
+
+- name: 创建Nginx主配置
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+  register: nginx_conf_created
+  notify: restart nginx
+
+- name: 确保nginx sites-available目录存在
+  file:
+    path: /etc/nginx/sites-available
+    state: directory
+    mode: '0755'
+
+- name: 确保nginx sites-enabled目录存在
+  file:
+    path: /etc/nginx/sites-enabled
+    state: directory
+    mode: '0755'
+
+- name: 创建Nginx默认站点配置
+  template:
+    src: default.conf.j2
+    dest: /etc/nginx/sites-available/default
+  when: nginx_default_site_enabled | bool
+  register: default_site_created
+  notify: restart nginx
+
+- name: 启用Nginx默认站点
+  file:
+    src: /etc/nginx/sites-available/default
+    dest: /etc/nginx/sites-enabled/default
+    state: link
+  when: nginx_default_site_enabled | bool
+  register: default_site_enabled
+  notify: restart nginx
+
+- name: 创建定义的网站配置
+  template:
+    src: vhost.conf.j2
+    dest: "/etc/nginx/sites-available/{{ item.name }}"
+  loop: "{{ websites }}"
+  when: websites is defined
+  register: website_created
+  notify: restart nginx
+
+- name: 启用定义的网站
+  file:
+    src: "/etc/nginx/sites-available/{{ item.name }}"
+    dest: "/etc/nginx/sites-enabled/{{ item.name }}"
+    state: link
+  loop: "{{ websites }}"
+  when: websites is defined
+  register: website_enabled
+  notify: restart nginx
+
+- name: 创建网站根目录
+  file:
+    path: "{{ item.root }}"
+    state: directory
+    mode: '0755'
+    owner: www-data
+    group: www-data
+  loop: "{{ websites }}"
+  when: websites is defined
+  register: website_root_created
+
+- name: 为每个网站创建index.html测试文件
+  template:
+    src: index.html.j2
+    dest: "{{ item.root }}/index.html"
+    owner: www-data
+    group: www-data
+    mode: '0644'
+  loop: "{{ websites }}"
+  when: websites is defined and website_root_created.changed
+  register: index_created
+
+- name: 启用Nginx服务
+  systemd:
+    name: nginx
+    state: started
+    enabled: yes
+  register: nginx_enabled 

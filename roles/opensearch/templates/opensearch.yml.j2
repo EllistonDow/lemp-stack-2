@@ -1,0 +1,11 @@
+# OpenSearch配置文件
+# Ansible管理，请勿手动修改
+
+cluster.name: {{ opensearch_cluster_name }}
+node.name: {{ opensearch_node_name }}
+path.data: /var/lib/opensearch
+path.logs: /var/log/opensearch
+network.host: 0.0.0.0
+http.port: {{ opensearch_http_port }}
+discovery.type: single-node
+plugins.security.disabled: true 

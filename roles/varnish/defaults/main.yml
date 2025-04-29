@@ -1,0 +1,55 @@
+---
+# Varnish版本和安装设置
+varnish_version: "7.6"
+varnish_package: "varnish"
+varnish_repo_key_url: "https://packagecloud.io/varnishcache/varnish{{ varnish_version | replace('.','') }}/gpgkey"
+varnish_repo_url: "https://packagecloud.io/varnishcache/varnish{{ varnish_version | replace('.','') }}/ubuntu"
+
+# 服务配置
+varnish_enabled: true
+varnish_start_on_boot: true
+
+# 系统设置
+varnish_listen_address: "0.0.0.0"
+varnish_listen_port: 6081
+varnish_admin_listen_address: "127.0.0.1"
+varnish_admin_listen_port: 6082
+
+# 内存和存储设置
+varnish_storage: "malloc,256m"
+varnish_memory_limit: "256m"
+
+# Nginx后端设置
+varnish_backend_host: "127.0.0.1"
+varnish_backend_port: 8080
+
+# VCL配置
+varnish_vcl_path: "/etc/varnish"
+varnish_default_vcl_template: "default.vcl.j2"
+varnish_config_path: "/etc/default/varnish"
+varnish_config_template: "varnish.j2"
+
+# 缓存和TTL设置
+varnish_ttl: 120
+varnish_grace: 300
+varnish_keep: 300
+
+# 额外包
+varnish_extra_packages:
+  - varnish-dev
+  - pkg-config
+
+# 安全设置
+varnish_secret_file: "/etc/varnish/secret"
+
+# Systemd服务设置
+varnish_systemd_config_path: "/etc/systemd/system/varnish.service"
+varnish_systemd_config_template: "varnish.service.j2"
+
+# SELinux设置 (如果适用)
+varnish_selinux_policy: permissive
+
+# 日志设置
+varnish_log_enabled: true
+varnish_ncsa_enabled: false
+varnish_ncsa_format: '%h %l %u %t "%r" %s %b "%{Referer}i" "%{User-agent}i"' 

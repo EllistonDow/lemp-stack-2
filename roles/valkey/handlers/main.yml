@@ -1,0 +1,9 @@
+---
+# Valkey (Redis) 处理器
+
+- name: restart valkey
+  systemd:
+    name: valkey
+    state: restarted
+    daemon_reload: yes
+  listen: "restart valkey" 

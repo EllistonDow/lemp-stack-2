@@ -1,0 +1,74 @@
+user  nginx;
+worker_processes  {{ nginx_worker_processes }};
+
+error_log  {{ nginx_error_log }} warn;
+pid        /var/run/nginx.pid;
+
+events {
+    worker_connections  {{ nginx_worker_connections }};
+    multi_accept on;
+    use epoll;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  {{ nginx_log_format }};
+
+    access_log  {{ nginx_access_log }}  main;
+
+    sendfile        on;
+    tcp_nopush      on;
+    tcp_nodelay     on;
+    server_tokens   {{ nginx_server_tokens }};
+
+    client_max_body_size {{ nginx_client_max_body_size }};
+    client_body_buffer_size 128k;
+    client_header_buffer_size 1k;
+    large_client_header_buffers 4 4k;
+
+    open_file_cache max=1000 inactive=20s;
+    open_file_cache_valid 30s;
+    open_file_cache_min_uses 2;
+    open_file_cache_errors on;
+
+    keepalive_timeout  65;
+    keepalive_requests 100;
+    reset_timedout_connection on;
+    send_timeout 2;
+
+    types_hash_max_size 2048;
+    server_names_hash_bucket_size 64;
+    
+    # SSL Settings
+    ssl_protocols {{ nginx_ssl_protocols }};
+    ssl_ciphers {{ nginx_ssl_ciphers }};
+    ssl_prefer_server_ciphers {{ nginx_ssl_prefer_server_ciphers }};
+    ssl_session_cache {{ nginx_ssl_session_cache }};
+    ssl_session_timeout {{ nginx_ssl_session_timeout }};
+    ssl_session_tickets {{ nginx_ssl_session_tickets }};
+
+    {% if nginx_ssl_stapling == 'on' %}
+    ssl_stapling {{ nginx_ssl_stapling }};
+    ssl_stapling_verify {{ nginx_ssl_stapling_verify }};
+    resolver 8.8.8.8 8.8.4.4 valid=300s;
+    resolver_timeout 5s;
+    {% endif %}
+
+    # Gzip Settings
+    {% if nginx_gzip_enabled %}
+    gzip on;
+    gzip_disable "msie6";
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level {{ nginx_gzip_comp_level }};
+    gzip_http_version 1.1;
+    gzip_min_length 256;
+    gzip_types {{ nginx_gzip_types }};
+    {% endif %}
+
+    # Virtual Host Configs
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+} 

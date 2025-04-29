@@ -1,0 +1,17 @@
+[Unit]
+Description=Valkey - Redis compatible in-memory datastore
+Documentation=https://www.valkey.io
+After=network.target
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/valkey-server /etc/valkey/valkey.conf
+ExecStop=/bin/kill -s TERM $MAINPID
+User=redis
+Group=redis
+RuntimeDirectory=valkey
+RuntimeDirectoryMode=0755
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target 

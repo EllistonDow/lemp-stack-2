@@ -1,0 +1,115 @@
+---
+# 安装Varnish 7.6
+
+- name: 确保apt缓存已更新
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  become: true
+
+- name: 安装必要的依赖
+  apt:
+    name:
+      - apt-transport-https
+      - gnupg
+      - curl
+      - software-properties-common
+    state: present
+  become: true
+
+- name: 添加Varnish GPG密钥
+  ansible.builtin.apt_key:
+    url: "{{ varnish_repo_key_url }}"
+    state: present
+  become: true
+
+- name: 添加Varnish存储库
+  ansible.builtin.apt_repository:
+    repo: "deb {{ varnish_repo_url }} {{ ansible_distribution_release }} main"
+    state: present
+    filename: varnish
+  become: true
+
+- name: 更新apt缓存
+  apt:
+    update_cache: yes
+  become: true
+
+- name: 安装Varnish
+  apt:
+    name: "{{ varnish_package }}"
+    state: present
+  become: true
+  register: varnish_installed
+
+- name: 安装额外的Varnish包
+  apt:
+    name: "{{ varnish_extra_packages }}"
+    state: present
+  become: true
+  when: varnish_extra_packages | length > 0
+
+- name: 创建Varnish VCL目录
+  file:
+    path: "{{ varnish_vcl_path }}"
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: 配置默认VCL
+  template:
+    src: "{{ varnish_default_vcl_template }}"
+    dest: "{{ varnish_vcl_path }}/default.vcl"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: restart varnish
+
+- name: 配置Varnish
+  template:
+    src: "{{ varnish_config_template }}"
+    dest: "{{ varnish_config_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: restart varnish
+
+- name: 配置Varnish systemd服务
+  template:
+    src: "{{ varnish_systemd_config_template }}"
+    dest: "{{ varnish_systemd_config_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: 
+    - reload systemd
+    - restart varnish
+
+- name: 确保Varnish服务已启用并运行
+  systemd:
+    name: varnish
+    state: "{{ 'started' if varnish_enabled else 'stopped' }}"
+    enabled: "{{ varnish_start_on_boot }}"
+    daemon_reload: yes
+  become: true
+
+- name: 配置Varnish NCSA日志服务
+  systemd:
+    name: varnishncsa
+    state: "{{ 'started' if varnish_ncsa_enabled else 'stopped' }}"
+    enabled: "{{ varnish_ncsa_enabled }}"
+  become: true
+  when: varnish_ncsa_enabled
+
+- name: 检查Varnish版本
+  command: varnishd -V
+  register: varnish_version_output
+  changed_when: false
+  check_mode: no
+
+- name: 显示Varnish版本
+  debug:
+    msg: "已安装Varnish版本: {{ varnish_version_output.stderr }}" 

@@ -1,0 +1,54 @@
+---
+# OpenSearch安装和配置任务
+
+- name: 添加OpenSearch GPG密钥
+  apt_key:
+    url: https://artifacts.opensearch.org/publickeys/opensearch.pgp
+    state: present
+
+- name: 添加OpenSearch仓库
+  apt_repository:
+    repo: "deb https://artifacts.opensearch.org/packages/{{ opensearch_version }}/apt stable main"
+    state: present
+    filename: opensearch
+
+- name: 更新apt缓存
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: 安装OpenSearch
+  apt:
+    name: opensearch
+    state: present
+
+- name: 创建OpenSearch配置目录
+  file:
+    path: /etc/opensearch
+    state: directory
+    owner: opensearch
+    group: opensearch
+    mode: '0755'
+
+- name: 配置OpenSearch
+  template:
+    src: opensearch.yml.j2
+    dest: /etc/opensearch/opensearch.yml
+    owner: opensearch
+    group: opensearch
+    mode: '0644'
+
+- name: 配置JVM选项
+  template:
+    src: jvm.options.j2
+    dest: /etc/opensearch/jvm.options
+    owner: opensearch
+    group: opensearch
+    mode: '0644'
+
+- name: 确保OpenSearch服务已启动并启用
+  systemd:
+    name: opensearch
+    state: started
+    enabled: yes
+    daemon_reload: yes 

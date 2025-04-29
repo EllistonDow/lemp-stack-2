@@ -1,0 +1,28 @@
+---
+# Common 角色默认变量
+
+# 系统设置默认值
+timezone: 'UTC'
+locale: 'en_US.UTF-8'
+
+# 默认安装的系统包
+system_packages:
+  - software-properties-common
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - python3-pip
+  - unzip
+  - vim
+  - htop
+  - git
+  - wget
+
+# 防火墙设置
+firewall_enabled: true
+firewall_allowed_tcp_ports:
+  - 22   # SSH
+  - 80   # HTTP
+  - 443  # HTTPS 

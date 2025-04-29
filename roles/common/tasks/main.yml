@@ -1,0 +1,115 @@
+---
+# 基础系统设置任务
+
+- name: 确保apt-transport-https已安装
+  apt:
+    name: apt-transport-https
+    state: present
+    update_cache: no
+
+- name: 确保所需的基础软件包已安装
+  apt:
+    name: "{{ system_packages }}"
+    state: present
+    update_cache: no
+    allow_change_held_packages: yes
+  register: packages_installed
+  
+- name: 设置系统时区
+  timezone:
+    name: "{{ timezone }}"
+  register: timezone_set
+  
+- name: 设置系统区域
+  locale_gen:
+    name: "{{ locale }}"
+    state: present
+  register: locale_set
+  
+- name: 更新全部软件包
+  apt:
+    upgrade: full
+    update_cache: no
+    allow_change_held_packages: yes
+  register: packages_updated
+  ignore_errors: yes
+
+- name: 配置防火墙
+  block:
+    - name: 安装ufw
+      apt:
+        name: ufw
+        state: present
+      
+    - name: 启用ufw
+      ufw:
+        state: enabled
+        policy: deny
+      
+    - name: 允许SSH连接
+      ufw:
+        rule: allow
+        port: 22
+        proto: tcp
+      
+    - name: 设置允许的TCP端口
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop: "{{ firewall_allowed_tcp_ports }}"
+      when: firewall_allowed_tcp_ports is defined
+  when: firewall_enabled | bool
+  
+- name: 设置主机名
+  hostname:
+    name: "{{ hostname }}"
+  when: hostname is defined
+  
+- name: 添加hosts条目
+  lineinfile:
+    path: /etc/hosts
+    line: "127.0.0.1 {{ hostname }}"
+    regexp: "^127\\.0\\.0\\.1\\s+{{ hostname }}$"
+  when: hostname is defined
+
+- name: 创建swap文件(如果内存小于2GB)
+  block:
+    - name: 检查系统内存
+      shell: free -m | grep Mem | awk '{print $2}'
+      register: system_memory
+      changed_when: false
+      
+    - name: 创建swap文件
+      shell: |
+        dd if=/dev/zero of=/swapfile bs=1M count=2048
+        chmod 600 /swapfile
+        mkswap /swapfile
+        swapon /swapfile
+        echo '/swapfile none swap sw 0 0' >> /etc/fstab
+      when: system_memory.stdout|int < 2048
+      args:
+        creates: /swapfile
+  
+- name: 配置系统限制 - 打开文件数
+  pam_limits:
+    domain: '*'
+    limit_type: soft
+    limit_item: nofile
+    value: 65535
+    
+- name: 配置系统限制 - 最大进程数
+  pam_limits:
+    domain: '*'
+    limit_type: soft
+    limit_item: nproc
+    value: 65535
+
+- name: 禁用不必要的系统服务
+  service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  loop:
+    - snapd
+  ignore_errors: yes 

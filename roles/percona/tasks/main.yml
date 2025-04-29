@@ -1,0 +1,134 @@
+---
+# Percona 安装和配置任务
+
+- name: 下载percona-release包
+  get_url:
+    url: https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+    dest: /tmp/percona-release_latest.generic_all.deb
+  register: percona_release_downloaded
+  
+- name: 安装percona-release包及其依赖
+  apt:
+    deb: /tmp/percona-release_latest.generic_all.deb
+    state: present
+  register: percona_release_installed
+  
+- name: 设置Percona Server仓库
+  command: percona-release setup ps-80
+  register: setup_percona_repo
+  changed_when: "'Enabled the ps-80 repository' in setup_percona_repo.stdout"
+  
+- name: 更新apt缓存
+  apt:
+    update_cache: yes
+  register: apt_update
+
+- name: 安装Percona Server和相关工具
+  apt:
+    name:
+      - percona-server-server
+      - percona-server-client
+      - percona-server-common
+      - percona-toolkit
+      - percona-xtrabackup-80
+    state: present
+  register: percona_installed
+
+- name: 设置root密码并保护安装
+  block:
+    - name: 检查MySQL root密码是否已设置
+      shell: >
+        mysql -u root -e "SELECT 'MySQL is running with password'"
+      register: mysql_root_password_check
+      ignore_errors: true
+      changed_when: false
+      no_log: true
+
+    - name: 设置MySQL root密码
+      mysql_user:
+        name: root
+        host: "{{ item }}"
+        password: "{{ percona_root_password }}"
+        state: present
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+      with_items:
+        - 127.0.0.1
+        - ::1
+        - localhost
+      when: mysql_root_password_check.rc != 0
+      register: root_password_set
+      no_log: true
+
+    - name: 创建.my.cnf文件
+      template:
+        src: my.cnf.j2
+        dest: "{{ mysql_config_file }}"
+        owner: root
+        group: root
+        mode: '0600'
+      register: my_cnf_created
+      no_log: true
+
+    - name: 移除匿名用户
+      mysql_user:
+        name: ''
+        host_all: yes
+        state: absent
+        login_user: root
+        login_password: "{{ percona_root_password }}"
+      register: anonymous_users_removed
+      no_log: true
+
+    - name: 移除测试数据库
+      mysql_db:
+        name: test
+        state: absent
+        login_user: root
+        login_password: "{{ percona_root_password }}"
+      register: test_db_removed
+      no_log: true
+
+    - name: 创建应用数据库
+      mysql_db:
+        name: "{{ percona_database.name }}"
+        state: present
+        login_user: root
+        login_password: "{{ percona_root_password }}"
+      when: percona_create_database | bool
+      register: app_db_created
+      no_log: true
+
+    - name: 创建数据库用户并授权
+      mysql_user:
+        name: "{{ percona_database.user }}"
+        password: "{{ percona_database.password }}"
+        priv: "{{ percona_database.name }}.*:ALL"
+        host: "{{ item }}"
+        state: present
+        login_user: root
+        login_password: "{{ percona_root_password }}"
+      with_items:
+        - localhost
+        - 127.0.0.1
+        - '%'
+      when: percona_create_database | bool
+      register: app_user_created
+      no_log: true
+  when: percona_installed.changed or ansible_check_mode
+
+- name: 配置MySQL服务器
+  template:
+    src: mysql.cnf.j2
+    dest: /etc/mysql/conf.d/mysql.cnf
+    owner: root
+    group: root
+    mode: '0644'
+  register: mysql_conf_created
+  notify: restart mysql
+
+- name: 启用MySQL服务
+  systemd:
+    name: mysql
+    state: started
+    enabled: yes
+  register: mysql_enabled 

@@ -1,0 +1,26 @@
+[www]
+user = www-data
+group = www-data
+listen = /run/php/php{{ item }}-fpm.sock
+listen.owner = www-data
+listen.group = www-data
+listen.mode = 0660
+pm = {{ php_fpm_pm }}
+pm.max_children = {{ php_fpm_max_children }}
+pm.start_servers = {{ php_fpm_start_servers }}
+pm.min_spare_servers = {{ php_fpm_min_spare_servers }}
+pm.max_spare_servers = {{ php_fpm_max_spare_servers }}
+pm.max_requests = {{ php_fpm_max_requests }}
+pm.process_idle_timeout = {{ php_fpm_process_idle_timeout }}
+pm.status_path = /status
+request_terminate_timeout = {{ php_max_execution_time }}s
+request_slowlog_timeout = 10s
+slowlog = /var/log/php{{ item }}-fpm.slow.log
+catch_workers_output = yes
+php_admin_value[error_log] = /var/log/php{{ item }}-fpm.error.log
+php_admin_flag[log_errors] = on
+php_value[session.save_handler] = files
+php_value[session.save_path] = /var/lib/php/sessions
+php_value[soap.wsdl_cache_dir] = /tmp
+php_value[upload_tmp_dir] = /tmp
+security.limit_extensions = .php .php{{ item }} 

@@ -1,0 +1,19 @@
+[Unit]
+Description=Varnish Cache, a high-performance HTTP accelerator
+Documentation=https://www.varnish-cache.org/docs/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=forking
+LimitNOFILE=131072
+LimitMEMLOCK=82000
+ExecStart=/usr/sbin/varnishd -j unix,user=vcache -F -a {{ varnish_listen_address }}:{{ varnish_listen_port }} -T {{ varnish_admin_listen_address }}:{{ varnish_admin_listen_port }} -f {{ varnish_vcl_path }}/default.vcl -S {{ varnish_secret_file }} -s {{ varnish_storage }}
+ExecReload=/usr/share/varnish/varnishreload
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+
+[Install]
+WantedBy=multi-user.target 

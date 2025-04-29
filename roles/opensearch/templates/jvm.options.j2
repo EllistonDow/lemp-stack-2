@@ -1,0 +1,28 @@
+# JVM配置
+# Ansible管理，请勿手动修改
+
+-Xms{{ opensearch_heap_size }}
+-Xmx{{ opensearch_heap_size }}
+
+# 垃圾回收设置
+-XX:+UseG1GC
+-XX:MaxGCPauseMillis=200
+-XX:InitiatingHeapOccupancyPercent=30
+-XX:G1ReservePercent=25
+
+# 其他JVM选项
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:HeapDumpPath=/var/lib/opensearch
+-XX:+PrintGCDetails
+-XX:+PrintGCDateStamps
+-XX:+PrintTenuringDistribution
+-XX:+PrintGCApplicationStoppedTime
+-XX:+PrintPromotionFailure
+-XX:PrintFLSStatistics=1
+-XX:+UseParNewGC
+-XX:+UseConcMarkSweepGC
+-XX:CMSInitiatingOccupancyFraction=75
+-XX:+UseCMSInitiatingOccupancyOnly
+-XX:+DisableExplicitGC
+-XX:+AlwaysPreTouch
+-XX:MaxDirectMemorySize=512m 

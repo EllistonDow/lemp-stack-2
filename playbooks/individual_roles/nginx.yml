@@ -1,0 +1,10 @@
+---
+# Nginx 角色单独playbook
+
+- name: 安装配置 Nginx
+  hosts: lemp_servers
+  become: true
+  gather_facts: true
+  
+  roles:
+    - { role: nginx } 

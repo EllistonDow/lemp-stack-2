@@ -1,0 +1,24 @@
+# 配置Varnish缓存进程
+
+# 使用-f选项指定VCL配置文件
+VARNISH_VCL_CONF={{ varnish_vcl_path }}/default.vcl
+
+# 缓存实例名(用在日志和stats中)
+VARNISH_INSTANCE=default
+
+# 监听地址和端口
+VARNISH_LISTEN_ADDRESS={{ varnish_listen_address }}
+VARNISH_LISTEN_PORT={{ varnish_listen_port }}
+
+# 管理界面监听地址和端口
+VARNISH_ADMIN_LISTEN_ADDRESS={{ varnish_admin_listen_address }}
+VARNISH_ADMIN_LISTEN_PORT={{ varnish_admin_listen_port }}
+
+# 后端存储配置
+VARNISH_STORAGE="{{ varnish_storage }}"
+
+# 密钥文件位置
+VARNISH_SECRET_FILE={{ varnish_secret_file }}
+
+# 其他参数
+DAEMON_OPTS="-j unix,user=vcache -F -a ${VARNISH_LISTEN_ADDRESS}:${VARNISH_LISTEN_PORT} -T ${VARNISH_ADMIN_LISTEN_ADDRESS}:${VARNISH_ADMIN_LISTEN_PORT} -f ${VARNISH_VCL_CONF} -S ${VARNISH_SECRET_FILE} -s ${VARNISH_STORAGE}" 

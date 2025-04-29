@@ -1,0 +1,100 @@
+---
+# PHP安装和配置任务
+
+- name: 添加PHP仓库
+  apt_repository:
+    repo: ppa:ondrej/php
+    state: present
+    update_cache: no
+  register: php_repo_added
+
+- name: 手动接受仓库更改
+  shell: |
+    apt-get update -y --allow-releaseinfo-change || true
+  when: php_repo_added.changed
+
+- name: 更新apt缓存
+  apt:
+    update_cache: yes
+  register: apt_update
+
+- name: 确保debconf-utils已安装
+  apt:
+    name: debconf-utils
+    state: present
+  register: debconf_installed
+
+- name: 安装PHP多个版本
+  block:
+    - name: 安装PHP基础包
+      apt:
+        name:
+          - "php{{ item }}"
+          - "php{{ item }}-fpm"
+        state: present
+      loop: "{{ php_versions }}"
+      register: php_installed
+
+    - name: 安装PHP扩展
+      apt:
+        name: "php{{ item[0] }}-{{ item[1] }}"
+        state: present
+      with_nested:
+        - "{{ php_versions }}"
+        - "{{ php_packages }}"
+      register: php_extensions_installed
+
+- name: 配置PHP-FPM
+  block:
+    - name: 配置PHP.ini
+      template:
+        src: php.ini.j2
+        dest: "/etc/php/{{ item }}/fpm/php.ini"
+      loop: "{{ php_versions }}"
+      register: php_ini_configured
+      notify: restart php-fpm
+
+    - name: 配置PHP-FPM www.conf
+      template:
+        src: www.conf.j2
+        dest: "/etc/php/{{ item }}/fpm/pool.d/www.conf"
+      loop: "{{ php_versions }}"
+      register: php_fpm_configured
+      notify: restart php-fpm
+
+- name: 创建PHP信息页
+  template:
+    src: info.php.j2
+    dest: "{{ nginx_default_site_root | default('/var/www/html') }}/info.php"
+    owner: www-data
+    group: www-data
+    mode: '0644'
+  when: php_create_info_page | bool
+  register: php_info_created
+
+- name: 确保PHP-FPM服务已启动并设置为开机启动
+  systemd:
+    name: "php{{ item }}-fpm"
+    state: started
+    enabled: yes
+  loop: "{{ php_versions }}"
+  register: php_fpm_enabled
+
+- name: 安装PHP命令行工具
+  block:
+    - name: 安装Composer
+      shell: |
+        curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer --version={{ composer_version }}
+      args:
+        creates: /usr/local/bin/composer
+      register: composer_installed
+
+    - name: 为所有用户安装全局Composer包
+      composer:
+        command: require
+        global_command: yes
+        arguments: "{{ item }}"
+      loop: "{{ composer_global_packages }}"
+      when: composer_global_packages | length > 0
+      register: composer_packages_installed
+  when: php_install_composer | bool 

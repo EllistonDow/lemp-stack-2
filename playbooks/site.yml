@@ -1,0 +1,89 @@
+---
+# LEMP Stack 主playbook
+
+- name: 配置LEMP服务器环境
+  hosts: all
+  become: yes
+  pre_tasks:
+    - name: 设置APT允许接受新密钥
+      copy:
+        dest: /etc/apt/apt.conf.d/99allow-insecure
+        content: |
+          APT::Get::AllowUnauthenticated "true";
+          Acquire::AllowInsecureRepositories "true";
+        mode: '0644'
+      
+    - name: 设置APT允许仓库信息变更
+      copy:
+        dest: /etc/apt/apt.conf.d/99allow-release-info-change
+        content: 'APT::Get::AllowReleaseInfoChange "true";'
+        mode: '0644'
+    
+    - name: 手动更新APT缓存
+      shell: apt-get update --allow-insecure-repositories --allow-releaseinfo-change
+      args:
+        creates: /tmp/apt-updated-flag
+      changed_when: false
+      ignore_errors: true
+        
+    - name: 确保Python3已安装
+      raw: test -e /usr/bin/python3 || (apt-get update && apt-get -y install python3)
+      changed_when: false
+      
+  roles:
+    - role: common
+      tags: common
+    
+    - role: nginx
+      tags: nginx
+    
+    - role: php
+      tags: php
+    
+    - role: percona
+      tags: percona
+      when: install_mysql | bool
+    
+    - role: valkey
+      tags: valkey
+      when: install_redis | bool
+    
+    - role: varnish
+      tags: [varnish, cache]
+    
+    - role: opensearch
+      tags: [opensearch, search]
+    
+    - role: rabbitmq
+      tags: [rabbitmq, queue]
+    
+    - role: composer
+      tags: [composer, php]
+    
+    - role: fail2ban
+      tags: [fail2ban, security]
+    
+    - role: webmin
+      tags: [webmin, admin]
+    
+    - role: phpmyadmin
+      tags: [phpmyadmin, admin]
+    
+    - role: certbot
+      tags: [certbot, ssl, security]
+    
+  post_tasks:
+    - name: 检查安装状态
+      command: echo "LEMP安装完成，检查服务状态"
+      register: installation_complete
+      changed_when: false
+      
+    - name: 显示所有已安装服务状态
+      shell: systemctl status nginx php{{ default_php_version }}-fpm mysql rabbitmq-server varnish
+      register: services_status
+      changed_when: false
+      ignore_errors: true
+      
+    - name: 输出结果
+      debug:
+        msg: "LEMP环境安装完成!" 

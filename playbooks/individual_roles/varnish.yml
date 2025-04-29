@@ -1,0 +1,7 @@
+---
+- name: 安装和配置Varnish 7.6
+  hosts: all
+  become: true
+  
+  roles:
+    - varnish 

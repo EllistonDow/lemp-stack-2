@@ -1,0 +1,93 @@
+vcl 4.1;
+
+# 默认后端配置
+backend default {
+    .host = "{{ varnish_backend_host }}";
+    .port = "{{ varnish_backend_port }}";
+    .connect_timeout = 3s;
+    .first_byte_timeout = 10s;
+    .between_bytes_timeout = 5s;
+    .probe = {
+        .url = "/";
+        .timeout = 2s;
+        .interval = 5s;
+        .window = 5;
+        .threshold = 3;
+    }
+}
+
+# ACL配置，允许清除缓存的IP地址
+acl purge {
+    "localhost";
+    "127.0.0.1";
+    "::1";
+}
+
+# 接收子例程
+sub vcl_recv {
+    # 设置X-Forwarded-For头
+    if (req.restarts == 0) {
+        if (req.http.X-Forwarded-For) {
+            set req.http.X-Forwarded-For = req.http.X-Forwarded-For + ", " + client.ip;
+        } else {
+            set req.http.X-Forwarded-For = client.ip;
+        }
+    }
+
+    # 只缓存GET和HEAD请求
+    if (req.method != "GET" && req.method != "HEAD") {
+        return (pass);
+    }
+
+    # 清除缓存请求处理
+    if (req.method == "PURGE") {
+        if (!client.ip ~ purge) {
+            return(synth(405, "此IP不允许清除缓存"));
+        }
+        return (purge);
+    }
+
+    # 不缓存认证请求
+    if (req.http.Authorization) {
+        return (pass);
+    }
+
+    # 移除可能影响缓存的Cookie和标头
+    unset req.http.Cookie;
+    unset req.http.Cache-Control;
+
+    return (hash);
+}
+
+# 处理缓存查找结果
+sub vcl_backend_response {
+    # 设置默认TTL
+    set beresp.ttl = {{ varnish_ttl }}s;
+    set beresp.grace = {{ varnish_grace }}s;
+    
+    # 处理设置的缓存控制标头
+    if (beresp.http.Cache-Control ~ "private") {
+        set beresp.uncacheable = true;
+        return (deliver);
+    }
+
+    # 准备缓存
+    if (beresp.ttl <= 0s || beresp.http.Set-Cookie) {
+        set beresp.uncacheable = true;
+        return (deliver);
+    }
+
+    return (deliver);
+}
+
+# 响应发送给客户端
+sub vcl_deliver {
+    # 添加调试信息到响应中
+    if (obj.hits > 0) {
+        set resp.http.X-Cache = "HIT";
+    } else {
+        set resp.http.X-Cache = "MISS";
+    }
+
+    return (deliver);
+} 

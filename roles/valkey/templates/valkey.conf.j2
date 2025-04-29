@@ -1,0 +1,66 @@
+# Valkey配置文件
+# Ansible管理，请勿手动修改
+
+# 网络
+bind {{ valkey_bind_interface }}
+port {{ valkey_port }}
+tcp-backlog {{ valkey_tcp_backlog }}
+unixsocket {{ valkey_unixsocket }}
+unixsocketperm {{ valkey_unixsocketperm }}
+timeout 0
+tcp-keepalive {{ valkey_tcp_keepalive }}
+
+# 通用
+daemonize {{ valkey_daemonize }}
+supervised {{ valkey_supervised }}
+pidfile /var/run/valkey/valkey.pid
+loglevel {{ valkey_loglevel }}
+logfile {{ valkey_logfile }}
+databases {{ valkey_databases }}
+
+# 快照
+{% for save_directive in valkey_save %}
+save {{ save_directive }}
+{% endfor %}
+stop-writes-on-bgsave-error yes
+rdbcompression yes
+rdbchecksum yes
+dbfilename dump.rdb
+dir /var/lib/valkey
+
+# 安全
+{% if valkey_password %}
+requirepass {{ valkey_password }}
+{% endif %}
+
+# 客户端
+maxclients {{ valkey_maxclients }}
+
+# 内存管理
+maxmemory {{ valkey_maxmemory }}
+maxmemory-policy {{ valkey_maxmemory_policy }}
+maxmemory-samples 5
+
+# 追加模式
+appendonly {{ valkey_appendonly }}
+appendfilename "appendonly.aof"
+appendfsync {{ valkey_appendfsync }}
+no-appendfsync-on-rewrite no
+auto-aof-rewrite-percentage 100
+auto-aof-rewrite-min-size 64mb
+
+# 高级配置
+hash-max-ziplist-entries 512
+hash-max-ziplist-value 64
+list-max-ziplist-entries 512
+list-max-ziplist-value 64
+set-max-intset-entries 512
+zset-max-ziplist-entries 128
+zset-max-ziplist-value 64
+hll-sparse-max-bytes 3000
+activerehashing yes
+client-output-buffer-limit normal 0 0 0
+client-output-buffer-limit slave 256mb 64mb 60
+client-output-buffer-limit pubsub 32mb 8mb 60
+hz 10
+aof-rewrite-incremental-fsync yes 
